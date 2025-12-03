@@ -73,24 +73,9 @@ jobs:
         # 重新配置并构建
         idf.py reconfigure
         idf.py -DBOARD_NAME=esp32c3-supermini -DBOARD_TYPE=esp32c3-supermini build
+        # 验证 generated_assets.bin 已生成（包含唤醒词模型）
+        ls -la build/generated_assets.bin
       timeout-minutes: 60
-
-    - name: Build assets.bin (wake word model)
-      run: |
-        source ~/esp-idf/export.sh
-        cd xiaozhi-esp32/scripts/spiffs_assets
-        # 查找唤醒词模型路径
-        MODEL_PATH=$(find ../../managed_components -name "wn9s_nihaoxiaozhi" -type d 2>/dev/null | head -1)
-        if [ -z "$MODEL_PATH" ]; then
-          MODEL_PATH=$(find ../../managed_components -name "wn9*nihaoxiaozhi*" -type d 2>/dev/null | head -1)
-        fi
-        echo "Found wake word model: $MODEL_PATH"
-        # 生成 assets.bin（仅包含唤醒词模型，节省空间）
-        python3 build.py --wakenet_model "$MODEL_PATH"
-        # 复制到构建目录
-        cp build/assets.bin ../../build/assets.bin
-        echo "assets.bin generated at: ../../build/assets.bin"
-        ls -la ../../build/assets.bin
 
     - name: Upload firmware artifact
       uses: actions/upload-artifact@v4
@@ -98,7 +83,7 @@ jobs:
         name: esp32c3-supermini-firmware
         path: |
           xiaozhi-esp32/build/xiaozhi.bin
-          xiaozhi-esp32/build/assets.bin
+          xiaozhi-esp32/build/generated_assets.bin
           xiaozhi-esp32/build/bootloader/*.bin
           xiaozhi-esp32/build/partition_table/*.bin
         retention-days: 30

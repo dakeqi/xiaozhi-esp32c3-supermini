@@ -85,7 +85,7 @@ BLK    -->   3.3V (常亮)
 |--------|----------|
 | `bootloader.bin` | `0x0` |
 | `partition-table.bin` | `0x8000` |
-| `xiaozhi.bin` | `0x10000` |
+| `xiaozhi.bin` | `` |
 
 **配置参数**：
 - **SPI SPEED**: 40MHz

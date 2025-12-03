@@ -65,6 +65,9 @@ jobs:
         echo "CONFIG_ESP_WIFI_AMPDU_TX_ENABLED=n" >> sdkconfig
         echo "CONFIG_ESP_WIFI_RX_BA_WIN=4" >> sdkconfig
         echo "CONFIG_COMPILER_OPTIMIZATION_SIZE=y" >> sdkconfig
+        # 启用离线唤醒词（WN9S小型模型，适合4MB Flash）
+        echo "CONFIG_USE_ESP_WAKE_WORD=y" >> sdkconfig
+        echo "CONFIG_SR_WN_WN9S_NIHAOXIAOZHI=y" >> sdkconfig
         
         # 重新配置并构建
         idf.py reconfigure

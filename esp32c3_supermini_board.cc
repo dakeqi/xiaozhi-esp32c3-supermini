@@ -93,9 +93,8 @@ public:
     }
 
     virtual Led* GetLed() override {
-        // ESP32-C3 SuperMini板载LED(GPIO8)已用于显示屏DC引脚
-        // 返回nullptr禁用LED功能
-        return nullptr;
+        static SingleLed led(BUILTIN_LED_GPIO);
+        return &led;
     }
 
     virtual Display* GetDisplay() override {

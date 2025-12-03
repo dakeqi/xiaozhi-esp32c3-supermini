@@ -4,6 +4,7 @@
 #include "application.h"
 #include "button.h"
 #include "led/single_led.h"
+#include "mcp_server.h"
 #include "config.h"
 
 #include <wifi_station.h>
@@ -12,6 +13,7 @@
 #include <esp_lcd_panel_io.h>
 #include <esp_lcd_panel_ops.h>
 #include <driver/spi_common.h>
+#include <driver/gpio.h>
 
 #define TAG "ESP32C3SuperMiniBoard"
 
@@ -29,6 +31,7 @@ class Esp32C3SuperMiniBoard : public WifiBoard {
 private:
     Button boot_button_;
     LcdDisplay* display_ = nullptr;
+    bool lamp_power_ = false;  // 灯/继电器状态
 
     void InitializeSpi() {
         spi_bus_config_t buscfg = {};
@@ -85,16 +88,59 @@ private:
         });
     }
 
+    // 初始化灯/继电器控制（语音命令）
+    void InitializeLampControl() {
+        // 配置GPIO8为输出（和LED共用）
+        gpio_config_t io_conf = {
+            .pin_bit_mask = (1ULL << BUILTIN_LED_GPIO),
+            .mode = GPIO_MODE_OUTPUT,
+            .pull_up_en = GPIO_PULLUP_DISABLE,
+            .pull_down_en = GPIO_PULLDOWN_DISABLE,
+            .intr_type = GPIO_INTR_DISABLE,
+        };
+        gpio_config(&io_conf);
+        gpio_set_level(BUILTIN_LED_GPIO, 0);
+
+        auto& mcp_server = McpServer::GetInstance();
+        
+        // 注册语音命令：获取灯状态
+        mcp_server.AddTool("self.lamp.get_state", "获取灯的开关状态", 
+            PropertyList(), [this](const PropertyList& properties) -> ReturnValue {
+            return lamp_power_ ? "{\"power\": true}" : "{\"power\": false}";
+        });
+
+        // 注册语音命令：开灯
+        mcp_server.AddTool("self.lamp.turn_on", "打开灯", 
+            PropertyList(), [this](const PropertyList& properties) -> ReturnValue {
+            lamp_power_ = true;
+            gpio_set_level(BUILTIN_LED_GPIO, 1);
+            ESP_LOGI(TAG, "Lamp turned ON");
+            return true;
+        });
+
+        // 注册语音命令：关灯
+        mcp_server.AddTool("self.lamp.turn_off", "关闭灯", 
+            PropertyList(), [this](const PropertyList& properties) -> ReturnValue {
+            lamp_power_ = false;
+            gpio_set_level(BUILTIN_LED_GPIO, 0);
+            ESP_LOGI(TAG, "Lamp turned OFF");
+            return true;
+        });
+
+        ESP_LOGI(TAG, "Lamp control initialized on GPIO%d", BUILTIN_LED_GPIO);
+    }
+
 public:
     Esp32C3SuperMiniBoard() : boot_button_(BOOT_BUTTON_GPIO) {
         InitializeSpi();
         InitializeLcdDisplay();
         InitializeButtons();
+        InitializeLampControl();  // 初始化灯控制
     }
 
     virtual Led* GetLed() override {
-        static SingleLed led(BUILTIN_LED_GPIO);
-        return &led;
+        // 返回nullptr，因为GPIO8用于灯/继电器控制
+        return nullptr;
     }
 
     virtual Display* GetDisplay() override {
